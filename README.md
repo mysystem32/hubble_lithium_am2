@@ -1,4 +1,4 @@
-# Hubble Lithium AM2 Battery BMS modbus RS485 reader
+# Hubble Lithium AM2 BMS modbus RS485 reader
 
 Python 3 module that provides read access to Hubble Lithium AM2 battery BMS via RS485/modbus.
 
@@ -133,7 +133,8 @@ import hubble_lithium_am2 as am2
 
 # open the instrument aka device
 # this is done ouside of the AM2_Pack class so you can adjust any serial settings
-instrument = minimalmodbus.Instrument(port="/dev/ttyUSB1", slaveaddress=1, debug=False, close_port_after_each_call=True)
+instrument = minimalmodbus.Instrument(port="/dev/ttyUSB1", slaveaddress=1,
+                               debug=False, close_port_after_each_call=True)
 instrument.serial.baudrate = 9600
 print(f"modbus serial instrument={instrument}")
 
