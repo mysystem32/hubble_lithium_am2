@@ -37,7 +37,7 @@ def main() -> None:
     bms_sn=pack.get_string('BMS_S_N')
     pack_sn=pack.get_string('Pack_S_N')
 
-    print(f"AM2_Pack: address={instrument.address}, all_registers=True")
+    print(f"AM2_Pack: pack_address={instrument.address}, all_registers=True")
     print(f"Version={version}")
     print(f"BMS_S_N={bms_sn}")
     print(f"Pack_S_N={pack_sn}")
@@ -48,8 +48,8 @@ def main() -> None:
     print(" id name                          scaled unit factor    HEX   uint    int   f/10  f/100 f/1000  fs/100 char2")
     for key in range(am2.AM2_NUMBER_OF_REGISTERS):
         reg=pack.register_data[key]
-        print(f"{reg.address:3} {reg.name:15} {reg.register_scaled:20} {reg.unit:4} "
-              f"{am2.get_factor(reg.address):6} "
+        print(f"{reg.register_address:3} {reg.name:15} {reg.register_scaled:20} {reg.unit:4} "
+              f"{am2.get_factor(reg.register_address):6} "
               f"0x{reg.register_raw:04x} "
               f"{am2.scale_raw_register('uint',reg.register_raw, reg.register_scaled):6d} "
               f"{am2.scale_raw_register('int',reg.register_raw, reg.register_scaled):6} "
