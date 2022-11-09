@@ -42,7 +42,7 @@ hubble_lithium_am2.py module is able to read:
 - BMS S/N
 - Pack S/N
 
-### AM-2 Registers: 0..180 - many unknown:
+## 🖳 AM-2 Registers: 0..180 - many unknown:
 
 PBMS Tools is able to read and display the Hubble Lithium AM2 BMS.  
 
@@ -121,7 +121,7 @@ You can connect multiple batteries using cable using a splitter.
 ![make your own 8 port cable splitter](/images/splitter-make-your-own-8-port.png) 
 ![make your own 4 port cable splitter](/images/splitter-make-your-own-4-port.png) 
 
-## Reading AM2 registers
+## 🖳 Reading AM2 registers
 
 Some sample code to read registers from an AM2:
 
@@ -149,7 +149,7 @@ print(result_dict)
 ```
 
 
-## Typical usage
+## 🖳 Typical usage
 
 Record cell voltages, cycles over time, etc
 
@@ -160,7 +160,7 @@ see [Grafana.md](/Grafana.md) for charts produced from BMS data
 ## 🙇‍♂️ Credits
 
 Thanks to:
-- Developers of minimalmodbus
+- minimalmodbus
 - kellaza <https://github.com/kellerza/sunsynk> for insparation
 - Powerforum <https://powerforum.co.za/> for advice
 - Solar-Assistant <https://solar-assistant.io/> for a great product
