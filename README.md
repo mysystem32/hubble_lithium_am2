@@ -22,7 +22,7 @@ $ pip3 install .
 
 Not sure what BMS is inside an AM-2.  
 Google search failed to locate any techical information.  
-The modbus register ID/value were reverse engineered / comparing to pbmstools. 
+The modbus register ID/value were reverse engineered / comparing to pbmstools.  
 Execute examples/print_all.py to displaying all registers.
 
 hubble_lithium_am2.py module is able to read:
