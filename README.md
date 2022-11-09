@@ -38,11 +38,11 @@ hubble_lithium_am2.py module is able to read:
 - Cell Area Temperature 1..4 (°C)
 - MOS Temperature (°C)
 - ENV Temperature (°C)
-- Firmware Version
-- BMS S/N
-- Pack S/N
+- Firmware Version (str)
+- BMS S/N (str)
+- Pack S/N (str)
 
-## 🖳 AM-2 Registers: 0..180 - many unknown:
+## 🕮 AM-2 Registers: 0..180 - many unknown:
 
 PBMS Tools is able to read and display the Hubble Lithium AM2 BMS.  
 
@@ -149,7 +149,7 @@ print(result_dict)
 ```
 
 
-## 🖳 Typical usage
+## 💵 Typical usage
 
 Record cell voltages, cycles over time, etc
 

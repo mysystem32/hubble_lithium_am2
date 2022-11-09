@@ -3,6 +3,7 @@
     Author:      Alberto da Silva
     Date:        10 Aug 2022
     Version:     0.9.0 - initial public release
+                 0.9.1 - fix bug in min/max voltage calculation, cleanup code
     License:     MIT
     Copyright:   2022 (c) Alberto da Silva
     DISCLAIMER:  Use at your own risk!
@@ -25,6 +26,8 @@
                         = instrument.address / Pack_address
 	register_address = 0 to 180
 
+    Possible enahancement: use constants/enum for registers
+        etc
 """
 
 import time
@@ -40,8 +43,13 @@ AM2_READ_DELAY = 0.3              # delay beween read retries in seconds
 AM2_READ_RETRY = 5                # number of read retries
 AM2_NUMBER_OF_REGISTERS = 181     # The AM2 has 180 registers numberd 0..180
 
+AM2_REGISTER_VCELL_START = 15     # Register address of first cell
+AM2_REGISTER_VCELL_END = 27       # Register address of end cell
+AM2_VCELL_COUNT = AM2_REGISTER_VCELL_END - AM2_REGISTER_VCELL_START
+
 """There are 180 registers in the Hubble AM2.
-dict() of registers that have been 'discovered'"""
+dict() of registers that have been 'discovered'
+"""
 AM2_REGISTERS_DICT = { # dict
     # address: register
         0: {'name':'Current',        'unit':'A',  'factor':'f100s', 'count':1},
@@ -204,12 +212,12 @@ class AM2_Pack:
         self.register_data = {} # dict()
         self.itr = None
         self.time=time.strftime('%FT%T.000')
-        
+
         # create dict of know registers
         for reg in AM2_REGISTERS_DICT:
             self.register_data[reg]=Register(reg)
 
-        if know_registers_only is False: 
+        if know_registers_only is False:
             # add unknown registers 0..180 to dict
             for reg in range(AM2_NUMBER_OF_REGISTERS):
                 self.register_data[reg]=Register(reg)
@@ -232,25 +240,27 @@ class AM2_Pack:
 
     def calc_computed(self):
         """calc min min avg diff - cell voltages 15..27"""
-        tot_val = max_val = min_val = self.register_data[15].register_scaled
+        tot_val = max_val = min_val = self.register_data[AM2_REGISTER_VCELL_START].register_scaled
         max_id = min_id = 1
-        for reg in range(16, 28):
-            cell = reg - 15
+        for cell in range(1, AM2_VCELL_COUNT):
+            cell_id = cell + 1
+            reg = AM2_REGISTER_VCELL_START + cell
             val = self.register_data[reg].register_scaled
-            min_id = cell if val < min_val else min_id
-            max_id = cell if val > max_val else max_id
+            min_id = cell_id if val < min_val else min_id
+            max_id = cell_id if val > max_val else max_id
             max_val = max(val,max_val)
             min_val = min(val,min_val)
             tot_val += val
 
         # store the min min avg diff and power
-        self.register_data[1000].register_scaled=min_id
-        self.register_data[1001].register_scaled=min_val
-        self.register_data[1002].register_scaled=max_id
-        self.register_data[1003].register_scaled=max_val
-        self.register_data[1004].register_scaled=round(max_val-min_val, 3)
-        self.register_data[1005].register_scaled=round(tot_val/13, 3)  # 13=Cell Count
-        self.register_data[1006].register_scaled=round(self.register_data[0].register_scaled * self.register_data[1].register_scaled, 1)  # Watts = A * V
+        self.register_data[1000].register_scaled=max_id
+        self.register_data[1001].register_scaled=max_val
+        self.register_data[1002].register_scaled=min_id
+        self.register_data[1003].register_scaled=min_val
+        self.register_data[1004].register_scaled=round(max_val-min_val, 3) # VoltDiff
+        self.register_data[1005].register_scaled=round(tot_val/AM2_VCELL_COUNT, 3)  # AvgVolt
+        self.register_data[1006].register_scaled=round(self.register_data[0].register_scaled *
+                                                       self.register_data[1].register_scaled, 1)  # Power = Watts = A * V
 
         self.register_data[1010].register_scaled=self.station_address
         self.register_data[1011].register_scaled=time.strftime('%FT%T.000')
