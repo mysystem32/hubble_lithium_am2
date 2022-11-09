@@ -4,7 +4,7 @@ Python 3 module that provides read access to Hubble Lithium AM2 battery BMS via 
 
 See [Hubble Lithium](https://www.hubblelithium.co.za/) website for more information on Hubble Lithium AM2 batteries.
 
-Uses the excellent <https://github.com/pyhys/minimalmodbus/> for communications
+Uses [minimalmodbus](https://github.com/pyhys/minimalmodbus/) for communications
 
 > DISCLAIMER: Use at your own risk! Access is read only so no issues are expected.
 
@@ -154,7 +154,7 @@ print(result_dict)
 Record cell voltages, cycles over time, etc
 
 
-see Grafana.md [Grafana.md](/Grafana.md)
+see [Grafana.md](/Grafana.md) for charts produced from BMS data
 
 
 ## 🙇‍♂️ Credits
