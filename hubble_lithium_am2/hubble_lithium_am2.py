@@ -96,6 +96,14 @@ AM2_STRING_DICT = {
     'Pack_S_N' : 170
 }
 
+def get_name(key: int):
+    """return name from the dict()"""
+    return AM2_REGISTERS_DICT[key]['name'] if key in AM2_REGISTERS_DICT else "unknown_reg_" + str(key)
+
+def get_unit(key: int):
+    """return unit from the dict()"""
+    return AM2_REGISTERS_DICT[key]['unit'] if key in AM2_REGISTERS_DICT else "?"
+
 def get_factor(key: int):
     """return factor from the dict()"""
     return AM2_REGISTERS_DICT[key]['factor'] if key in AM2_REGISTERS_DICT else 'null'
@@ -156,16 +164,9 @@ class Register:
     def __init__(self, register_address: int):
         """constructor"""
         self.register_address = register_address
+        self.name = get_name(register_address)
+        self.unit = get_unit(register_address)
         self.register_raw: int = None  # register value from BMS
-
-        if register_address in AM2_REGISTERS_DICT:
-            # know register
-            self.name = AM2_REGISTERS_DICT[register_address]['name']
-            self.unit = AM2_REGISTERS_DICT[register_address]['unit']
-        else:
-            # unknow register
-            self.name = "unknown_reg_" + str(register_address)
-            self.unit = "?"
 
     def read_1_register(self, instrument) -> None:
         """read a Register from the instrument"""
@@ -201,14 +202,18 @@ class AM2_Pack:
         instrument.address = instrument.address if station_address is None else station_address
         self.station_address = instrument.address
         self.register_data = {} # dict()
-        for reg in AM2_REGISTERS_DICT:
-            self.register_data[reg]=Register(reg)
-        if know_registers_only is False:
-            for reg in range(AM2_NUMBER_OF_REGISTERS):
-                if reg not in AM2_REGISTERS_DICT:
-                    self.register_data[reg]=Register(reg)
         self.itr = None
         self.time=time.strftime('%FT%T.000')
+        
+        # create dict of know registers
+        for reg in AM2_REGISTERS_DICT:
+            self.register_data[reg]=Register(reg)
+
+        if know_registers_only is False: 
+            # add unknown registers 0..180 to dict
+            for reg in range(AM2_NUMBER_OF_REGISTERS):
+                self.register_data[reg]=Register(reg)
+
         logger.debug("instrument=%s",self.instrument)
 
     def __iter__(self):
