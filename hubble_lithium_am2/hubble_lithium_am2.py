@@ -18,6 +18,13 @@
     Google failed to locate any techical information information
     The modbus register ID/value were reverse engineered / comparing to pbmstools
     See test/ folder for displaying all registers
+
+    Terminology:
+        names are mostly derived from minimalmodbus
+	station_address = Modbus address of the device 1 to 247, 0 = broadcast
+                        = instrument.address / Pack_address
+	register_address = 0 to 180
+
 """
 
 import time
@@ -36,7 +43,7 @@ AM2_NUMBER_OF_REGISTERS = 181     # The AM2 has 180 registers numberd 0..180
 """There are 180 registers in the Hubble AM2.
 dict() of registers that have been 'discovered'"""
 AM2_REGISTERS_DICT = { # dict
-    # sensor registers
+    # address: register
         0: {'name':'Current',        'unit':'A',  'factor':'f100s', 'count':1},
         1: {'name':'Voltage',        'unit':'V',  'factor':'f100',  'count':1},
         2: {'name':'SoC',            'unit':'%',  'factor':'uint',  'count':1},
@@ -77,7 +84,7 @@ AM2_REGISTERS_DICT = { # dict
      1004: {'name':'VoltDiff',       'unit':'V',  'factor':'comp',  'count':1},
      1005: {'name':'AvgVolt',        'unit':'V',  'factor':'comp',  'count':1},
      1006: {'name':'Power',          'unit':'W',  'factor':'comp',  'count':1},
-     1010: {'name':'Pack',           'unit':'int','factor':'comp',  'count':1},
+     1010: {'name':'Pack_address',   'unit':'int','factor':'comp',  'count':1},
      1011: {'name':'Time',           'unit':'tm', 'factor':'comp',  'count':1}
 }
 
@@ -124,18 +131,18 @@ def scale_raw_register(factor: str, register_raw: int, register_scaled):
 
     return round(register_raw, 3)
 
-def read_registers(instrument, registeraddress: int, number_of_registers: int = 1) -> List[int]:
+def read_registers(instrument, register_address: int, number_of_registers: int = 1) -> List[int]:
     """ read count registers = returns a List """
     for _ in range(AM2_READ_RETRY):
         try:
-            raw_result = instrument.read_registers(registeraddress=registeraddress, number_of_registers=number_of_registers) # LIST
+            raw_result = instrument.read_registers(registeraddress=register_address, number_of_registers=number_of_registers) # LIST
             return raw_result
         except Exception as ex:
             exception_save = ex
             time.sleep(AM2_READ_DELAY)
 
-    logger.warning("Exception: registeraddress=%d, number_of_registers=%d, exception=%s, roundtrip_time=%0.3f, read_retry=%d",
-                    registeraddress,number_of_registers,exception_save,instrument.roundtrip_time,AM2_READ_RETRY)
+    logger.warning("Exception: register_address=%d, number_of_registers=%d, exception=%s, roundtrip_time=%0.3f, read_retry=%d",
+                    register_address,number_of_registers,exception_save,instrument.roundtrip_time,AM2_READ_RETRY)
 
     return [None] * number_of_registers
 
@@ -146,23 +153,23 @@ class Register:
     unit: str # unit - eg Volts, Amps, Watts
     register_scaled: int = 0 # register value after processing/scaling
 
-    def __init__(self, registeraddress: int):
+    def __init__(self, register_address: int):
         """constructor"""
-        self.address = registeraddress
+        self.register_address = register_address
         self.register_raw: int = None  # register value from BMS
 
-        if registeraddress in AM2_REGISTERS_DICT:
+        if register_address in AM2_REGISTERS_DICT:
             # know register
-            self.name = AM2_REGISTERS_DICT[registeraddress]['name']
-            self.unit = AM2_REGISTERS_DICT[registeraddress]['unit']
+            self.name = AM2_REGISTERS_DICT[register_address]['name']
+            self.unit = AM2_REGISTERS_DICT[register_address]['unit']
         else:
             # unknow register
-            self.name = "unknown_reg_" + str(registeraddress)
+            self.name = "unknown_reg_" + str(register_address)
             self.unit = "?"
 
     def read_1_register(self, instrument) -> None:
         """read a Register from the instrument"""
-        factor = get_factor(self.address)
+        factor = get_factor(self.register_address)
 
         # don't re-read 'char2' (Version/BMS S_N/Pack S_N) as these are static
         if factor == 'char2' and self.register_raw is not None:
@@ -172,8 +179,8 @@ class Register:
         if factor == 'comp':
             return
 
-        count = get_count(self.address)
-        result_list = read_registers(instrument, registeraddress=self.address, number_of_registers=count)
+        count = get_count(self.register_address)
+        result_list = read_registers(instrument, register_address=self.register_address, number_of_registers=count)
         self.register_raw = result_list[0]
         if count == 1:
             # single register - int / uint / float
@@ -188,11 +195,11 @@ class Register:
 @dataclass(init=False)
 class AM2_Pack:
     """AM2 class for reading Hubble AM2 battery"""
-    def __init__(self, instrument, slaveaddress: int = None, know_registers_only: bool=True) -> None:
+    def __init__(self, instrument, station_address: int = None, know_registers_only: bool=True) -> None:
         """constructor"""
         self.instrument = instrument # minimalmodbus.Instrument aka device
-        instrument.address = instrument.address if slaveaddress is None else slaveaddress
-        self.slaveaddress = instrument.address
+        instrument.address = instrument.address if station_address is None else station_address
+        self.station_address = instrument.address
         self.register_data = {} # dict()
         for reg in AM2_REGISTERS_DICT:
             self.register_data[reg]=Register(reg)
@@ -214,9 +221,9 @@ class AM2_Pack:
         key = next(self.itr)
         reg = self.register_data[key]
         # return key, value - value is a dict()
-        return reg.address, { 'name': reg.name,
-                              'register_scaled': reg.register_scaled,
-                              'unit': reg.unit }
+        return reg.register_address, { 'name': reg.name,
+                                       'register_scaled': reg.register_scaled,
+                                       'unit': reg.unit }
 
     def calc_computed(self):
         """calc min min avg diff - cell voltages 15..27"""
@@ -240,12 +247,12 @@ class AM2_Pack:
         self.register_data[1005].register_scaled=round(tot_val/13, 3)  # 13=Cell Count
         self.register_data[1006].register_scaled=round(self.register_data[0].register_scaled * self.register_data[1].register_scaled, 1)  # Watts = A * V
 
-        self.register_data[1010].register_scaled=self.slaveaddress
+        self.register_data[1010].register_scaled=self.station_address
         self.register_data[1011].register_scaled=time.strftime('%FT%T.000')
 
     def read_pack(self) -> None:
         """read pack of register_data"""
-        self.instrument.address = self.slaveaddress
+        self.instrument.address = self.station_address
         self.time=time.strftime('%FT%T.000')
         for reg in self.register_data.values():
             reg.read_1_register(self.instrument)
