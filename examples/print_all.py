@@ -21,33 +21,33 @@ def main() -> None:
     logging.basicConfig(level=logging.DEBUG)
 
     # open the instrument aka device
-    # this is done ouside of the AM2_Pack class so you can adjust any serial settings
+    # this is done ouside of the AM2battery class so you can adjust any serial settings
     instrument = minimalmodbus.Instrument(port=port, slaveaddress=1, debug=False, close_port_after_each_call=True)
     instrument.serial.baudrate = 9600
     print(f"modbus serial instrument={instrument}")
-    
-    # create an AM2_Pack object
-    pack = am2.AM2_Pack(instrument, know_registers_only=False)
+
+    # create an AM2battery object
+    battery = am2.AM2battery(instrument, know_registers_only=False)
 
     print("Reading AM2 registers...")
-    pack.read_pack()
+    battery.read_battery()
 
     print("version information")
-    version=pack.get_string('Version')
-    bms_sn=pack.get_string('BMS_S_N')
-    pack_sn=pack.get_string('Pack_S_N')
+    version=battery.get_string('Version')
+    sn_bms=battery.get_string('S_N_BMS')
+    sn_pack=battery.get_string('S_N_Pack')
 
-    print(f"AM2_Pack: pack_address={instrument.address}, all_registers=True")
+    print(f"AM2battery: battery_address={instrument.address}, all_registers=True")
     print(f"Version={version}")
-    print(f"BMS_S_N={bms_sn}")
-    print(f"Pack_S_N={pack_sn}")
+    print(f"S_N_BMS={sn_bms}")
+    print(f"S_N_Pack={sn_pack}")
     print(f"AM2_READ_RETRY={am2.AM2_READ_RETRY}, AM2_READ_DELAY={am2.AM2_READ_DELAY:0.2f}")
     print("")
 
     # this is useful to decide a register type
     print(" id name                          scaled unit factor    HEX   uint    int   f/10  f/100 f/1000  fs/100 char2")
     for key in range(am2.AM2_NUMBER_OF_REGISTERS):
-        reg=pack.register_data[key]
+        reg=battery.register_data[key]
         print(f"{reg.register_address:3} {reg.name:15} {reg.register_scaled:20} {reg.unit:4} "
               f"{am2.get_factor(reg.register_address):6} "
               f"0x{reg.register_raw:04x} "

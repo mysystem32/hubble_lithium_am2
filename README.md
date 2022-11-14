@@ -52,15 +52,15 @@ The register id / name correlation was done by reading all the registers and com
 There are 180 registers, of which about half have been decoded.
 
 ```python
-# dict() of registers that have been 'discovered'
+# dict() of registers that have been 'discovered' - names are similar to PBMS Tools
 AM2_REGISTERS_DICT = { # dict
-    #  id 
+    # address: register
         0: {'name':'Current',        'unit':'A',  'factor':'f100s', 'count':1},
         1: {'name':'Voltage',        'unit':'V',  'factor':'f100',  'count':1},
         2: {'name':'SoC',            'unit':'%',  'factor':'uint',  'count':1},
         3: {'name':'SoH',            'unit':'%',  'factor':'uint',  'count':1},
-        4: {'name':'RemainCapacity', 'unit':'Ah', 'factor':'f100',  'count':1},
-        5: {'name':'FullCapacity',   'unit':'Ah', 'factor':'f100',  'count':1},
+        4: {'name':'Capacity_Remain','unit':'Ah', 'factor':'f100',  'count':1},
+        5: {'name':'Capacity_Full',  'unit':'Ah', 'factor':'f100',  'count':1},
         7: {'name':'Cycles',         'unit':'int','factor':'uint',  'count':1},
        15: {'name':'Vcell_01',       'unit':'V',  'factor':'f1000', 'count':1},
        16: {'name':'Vcell_02',       'unit':'V',  'factor':'f1000', 'count':1},
@@ -75,28 +75,60 @@ AM2_REGISTERS_DICT = { # dict
        25: {'name':'Vcell_11',       'unit':'V',  'factor':'f1000', 'count':1},
        26: {'name':'Vcell_12',       'unit':'V',  'factor':'f1000', 'count':1},
        27: {'name':'Vcell_13',       'unit':'V',  'factor':'f1000', 'count':1},
-       31: {'name':'TCell_1',        'unit':'C',  'factor':'f10',   'count':1},
-       32: {'name':'TCell_2',        'unit':'C',  'factor':'f10',   'count':1},
-       33: {'name':'TCell_3',        'unit':'C',  'factor':'f10',   'count':1},
-       34: {'name':'TCell_4',        'unit':'C',  'factor':'f10',   'count':1},
-       35: {'name':'MOS_T',          'unit':'C',  'factor':'f10',   'count':1}, # mosfet
-       36: {'name':'ENV_T',          'unit':'C',  'factor':'f10',   'count':1},
+       31: {'name':'Tcell_1',        'unit':'°C', 'factor':'f10',   'count':1}, # Avg temp
+       32: {'name':'Tcell_2',        'unit':'°C', 'factor':'f10',   'count':1}, # Avg temp
+       33: {'name':'Tcell_3',        'unit':'°C', 'factor':'f10',   'count':1}, # Avg temp
+       34: {'name':'Tcell_4',        'unit':'°C', 'factor':'f10',   'count':1}, # Avg temp
+       35: {'name':'T_MOSFET',       'unit':'°C', 'factor':'f10',   'count':1},
+       36: {'name':'T_ENV',          'unit':'°C', 'factor':'f10',   'count':1},
 
     # String registers - these are only read once
       150: {'name':'Version',        'unit':'str','factor':'char2', 'count':10},
-      160: {'name':'BMS_S_N',        'unit':'str','factor':'char2', 'count':10},
-      170: {'name':'Pack_S_N',       'unit':'str','factor':'char2', 'count':10},
-    
-    # computed registers - not physical - not really neccessary
-     1000: {'name':'MaxVolt_cell',   'unit':'int','factor':'comp',  'count':1},
-     1001: {'name':'MaxVolt',        'unit':'V',  'factor':'comp',  'count':1},
-     1002: {'name':'MinVolt_cell',   'unit':'int','factor':'comp',  'count':1},
-     1003: {'name':'MinVolt',        'unit':'V',  'factor':'comp',  'count':1},
-     1004: {'name':'VoltDiff',       'unit':'V',  'factor':'comp',  'count':1},
-     1005: {'name':'AvgVolt',        'unit':'V',  'factor':'comp',  'count':1},
-     1006: {'name':'Power',          'unit':'W',  'factor':'comp',  'count':1}
+      160: {'name':'S_N_BMS',        'unit':'str','factor':'char2', 'count':10},
+      170: {'name':'S_N_Pack',       'unit':'str','factor':'char2', 'count':10},
+
+    # computed registers - not really neccessary
+     1000: {'name':'Vcell_max_id',   'unit':'int','factor':'comp',  'count':1},
+     1001: {'name':'Vcell_max',      'unit':'V',  'factor':'comp',  'count':1},
+     1002: {'name':'Vcell_min_id',   'unit':'int','factor':'comp',  'count':1},
+     1003: {'name':'Vcell_min',      'unit':'V',  'factor':'comp',  'count':1},
+     1004: {'name':'Vcell_diff',     'unit':'V',  'factor':'comp',  'count':1},
+     1005: {'name':'Vcell_avg',      'unit':'V',  'factor':'comp',  'count':1},
+     1006: {'name':'Power',          'unit':'W',  'factor':'comp',  'count':1},
+     1010: {'name':'Address',        'unit':'int','factor':'comp',  'count':1},
+     1011: {'name':'Time',           'unit':'tm', 'factor':'comp',  'count':1}
 }
 ```
+
+## 🖳 Reading AM2 registers
+
+Some sample code to read registers from an AM2:
+
+```python
+import minimalmodbus
+import hubble_lithium_am2 as am2
+
+# open the instrument aka device
+# this is done ouside of the AM2_battery class so you can adjust any serial settings
+instrument = minimalmodbus.Instrument(port="/dev/ttyUSB1", slaveaddress=1, debug=False, close_port_after_each_call=True)
+instrument.serial.baudrate = 9600
+print(f"modbus serial instrument={instrument}")
+
+# create an AM2battery object
+battery = am2.AM2battery(instrument)
+
+print("Reading AM2 registers...")
+battery.read_battery()
+
+result_dict = dict(battery)
+print(result_dict)
+```
+
+## 💵 Typical usage
+
+Record cell voltages, cycles over time, send data to Home Assistant, etc
+
+see [Examples.md](/Examples.md) for sample code.
 
 ## 🔌 USB-to-RS485 adaptor
 
@@ -120,42 +152,6 @@ You can connect multiple batteries using cable using a splitter.
 ![4 port cable splitter](/images/splitter-4-port.png) 
 ![make your own 8 port cable splitter](/images/splitter-make-your-own-8-port.png) 
 ![make your own 4 port cable splitter](/images/splitter-make-your-own-4-port.png) 
-
-## 🖳 Reading AM2 registers
-
-Some sample code to read registers from an AM2:
-
-```python
-import minimalmodbus
-import hubble_lithium_am2 as am2
-
-"""test code"""
-
-# open the instrument aka device
-# this is done ouside of the AM2_Pack class so you can adjust any serial settings
-instrument = minimalmodbus.Instrument(port="/dev/ttyUSB1", slaveaddress=1,
-                               debug=False, close_port_after_each_call=True)
-instrument.serial.baudrate = 9600
-print(f"modbus serial instrument={instrument}")
-
-# create an AM2_Pack object
-pack = am2.AM2_Pack(instrument)
-
-print("Reading AM2 registers...")
-pack.read_pack()
-
-result_dict = dict(pack)
-print(result_dict)
-```
-
-
-## 💵 Typical usage
-
-Record cell voltages, cycles over time, etc
-
-
-see [Grafana.md](/Grafana.md) for charts produced from BMS data
-
 
 ## 🙇‍♂️ Credits
 

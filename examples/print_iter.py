@@ -22,20 +22,20 @@ def main() -> None:
     logging.basicConfig(level=logging.DEBUG)
 
     # open the instrument aka device
-    # this is done ouside of the AM2_Pack class so you can adjust any serial settings
+    # this is done ouside of the AM2_battery class so you can adjust any serial settings
     instrument = minimalmodbus.Instrument(port=port, slaveaddress=1, debug=False, close_port_after_each_call=True)
     instrument.serial.baudrate = 9600
     print(f"modbus serial instrument={instrument}")
     
-    # create an AM2_Pack object
-    pack = am2.AM2_Pack(instrument)
+    # create an AM2battery object
+    battery = am2.AM2battery(instrument)
 
     print("Reading AM2 registers...")
-    pack.read_pack()
+    battery.read_battery()
 
     sep = ""
     print("{")
-    for key, reg in pack:
+    for key, reg in battery:
         print(sep, key, ":", reg, end="")
         sep = ",\n"
     print("\n}")

@@ -4,6 +4,10 @@
     Date:        10 Aug 2022
     Version:     0.9.0 - initial public release
                  0.9.1 - fix bug in min/max voltage calculation, cleanup code
+                 0.9.2 - fix bug in string registers
+                        rename pack to battery
+                        rename registers to better group
+                        Track read errors in read_registers
     License:     MIT
     Copyright:   2022 (c) Alberto da Silva
     DISCLAIMER:  Use at your own risk!
@@ -27,13 +31,11 @@
 	register_address = 0 to 180
 
     Possible enahancement: use constants/enum for registers
-        etc
 """
 
 import time
 import logging
 from ctypes import c_int16
-from typing import List
 from dataclasses import dataclass
 
 # Globals
@@ -47,8 +49,11 @@ AM2_REGISTER_VCELL_START = 15     # Register address of first cell
 AM2_REGISTER_VCELL_END = 27       # Register address of end cell
 AM2_VCELL_COUNT = AM2_REGISTER_VCELL_END - AM2_REGISTER_VCELL_START
 
+
 """There are 180 registers in the Hubble AM2.
 dict() of registers that have been 'discovered'
+    'name': alphanumerics, underscore and hyphen only for HASS
+    'name' is similar to names from PBMS tools
 """
 AM2_REGISTERS_DICT = { # dict
     # address: register
@@ -56,8 +61,8 @@ AM2_REGISTERS_DICT = { # dict
         1: {'name':'Voltage',        'unit':'V',  'factor':'f100',  'count':1},
         2: {'name':'SoC',            'unit':'%',  'factor':'uint',  'count':1},
         3: {'name':'SoH',            'unit':'%',  'factor':'uint',  'count':1},
-        4: {'name':'RemainCapacity', 'unit':'Ah', 'factor':'f100',  'count':1},
-        5: {'name':'FullCapacity',   'unit':'Ah', 'factor':'f100',  'count':1},
+        4: {'name':'Capacity_Remain','unit':'Ah', 'factor':'f100',  'count':1},
+        5: {'name':'Capacity_Full',  'unit':'Ah', 'factor':'f100',  'count':1},
         7: {'name':'Cycles',         'unit':'int','factor':'uint',  'count':1},
        15: {'name':'Vcell_01',       'unit':'V',  'factor':'f1000', 'count':1},
        16: {'name':'Vcell_02',       'unit':'V',  'factor':'f1000', 'count':1},
@@ -72,27 +77,27 @@ AM2_REGISTERS_DICT = { # dict
        25: {'name':'Vcell_11',       'unit':'V',  'factor':'f1000', 'count':1},
        26: {'name':'Vcell_12',       'unit':'V',  'factor':'f1000', 'count':1},
        27: {'name':'Vcell_13',       'unit':'V',  'factor':'f1000', 'count':1},
-       31: {'name':'TCell_1',        'unit':'C',  'factor':'f10',   'count':1}, # Avg temp 1-4?
-       32: {'name':'TCell_2',        'unit':'C',  'factor':'f10',   'count':1}, # Avg temp 5-8?
-       33: {'name':'TCell_3',        'unit':'C',  'factor':'f10',   'count':1}, # Avg temp 9-12?
-       34: {'name':'TCell_4',        'unit':'C',  'factor':'f10',   'count':1}, # Avg temp 13-13?
-       35: {'name':'MOS_T',          'unit':'C',  'factor':'f10',   'count':1}, # MOSTET
-       36: {'name':'ENV_T',          'unit':'C',  'factor':'f10',   'count':1},
+       31: {'name':'Tcell_1',        'unit':'°C', 'factor':'f10',   'count':1}, # Avg temp
+       32: {'name':'Tcell_2',        'unit':'°C', 'factor':'f10',   'count':1}, # Avg temp
+       33: {'name':'Tcell_3',        'unit':'°C', 'factor':'f10',   'count':1}, # Avg temp
+       34: {'name':'Tcell_4',        'unit':'°C', 'factor':'f10',   'count':1}, # Avg temp
+       35: {'name':'T_MOSFET',       'unit':'°C', 'factor':'f10',   'count':1},
+       36: {'name':'T_ENV',          'unit':'°C', 'factor':'f10',   'count':1},
 
     # String registers - these are only read once
       150: {'name':'Version',        'unit':'str','factor':'char2', 'count':10},
-      160: {'name':'BMS_S_N',        'unit':'str','factor':'char2', 'count':10},
-      170: {'name':'Pack_S_N',       'unit':'str','factor':'char2', 'count':10},
+      160: {'name':'S_N_BMS',        'unit':'str','factor':'char2', 'count':10},
+      170: {'name':'S_N_Pack',       'unit':'str','factor':'char2', 'count':10},
 
     # computed registers - not really neccessary
-     1000: {'name':'MaxVolt_cell',   'unit':'int','factor':'comp',  'count':1},
-     1001: {'name':'MaxVolt',        'unit':'V',  'factor':'comp',  'count':1},
-     1002: {'name':'MinVolt_cell',   'unit':'int','factor':'comp',  'count':1},
-     1003: {'name':'MinVolt',        'unit':'V',  'factor':'comp',  'count':1},
-     1004: {'name':'VoltDiff',       'unit':'V',  'factor':'comp',  'count':1},
-     1005: {'name':'AvgVolt',        'unit':'V',  'factor':'comp',  'count':1},
+     1000: {'name':'Vcell_max_id',   'unit':'int','factor':'comp',  'count':1},
+     1001: {'name':'Vcell_max',      'unit':'V',  'factor':'comp',  'count':1},
+     1002: {'name':'Vcell_min_id',   'unit':'int','factor':'comp',  'count':1},
+     1003: {'name':'Vcell_min',      'unit':'V',  'factor':'comp',  'count':1},
+     1004: {'name':'Vcell_diff',     'unit':'V',  'factor':'comp',  'count':1},
+     1005: {'name':'Vcell_avg',      'unit':'V',  'factor':'comp',  'count':1},
      1006: {'name':'Power',          'unit':'W',  'factor':'comp',  'count':1},
-     1010: {'name':'Pack_address',   'unit':'int','factor':'comp',  'count':1},
+     1010: {'name':'Address',        'unit':'int','factor':'comp',  'count':1},
      1011: {'name':'Time',           'unit':'tm', 'factor':'comp',  'count':1}
 }
 
@@ -100,25 +105,30 @@ AM2_REGISTERS_DICT = { # dict
 # look up table
 AM2_STRING_DICT = {
     'Version'  : 150,
-    'BMS_S_N'  : 160,
-    'Pack_S_N' : 170
+    'S_N_BMS'  : 160,
+    'S_N_Pack' : 170
 }
+
 
 def get_name(key: int):
     """return name from the dict()"""
     return AM2_REGISTERS_DICT[key]['name'] if key in AM2_REGISTERS_DICT else "unknown_reg_" + str(key)
 
+
 def get_unit(key: int):
     """return unit from the dict()"""
     return AM2_REGISTERS_DICT[key]['unit'] if key in AM2_REGISTERS_DICT else "?"
+
 
 def get_factor(key: int):
     """return factor from the dict()"""
     return AM2_REGISTERS_DICT[key]['factor'] if key in AM2_REGISTERS_DICT else 'null'
 
+
 def get_count(key: int):
     """return count from the dict()"""
     return AM2_REGISTERS_DICT[key]['count'] if key in AM2_REGISTERS_DICT else 1
+
 
 def scale_raw_register(factor: str, register_raw: int, register_scaled):
     """return register_scaled = factor(register_raw)"""
@@ -147,20 +157,29 @@ def scale_raw_register(factor: str, register_raw: int, register_scaled):
 
     return round(register_raw, 3)
 
-def read_registers(instrument, register_address: int, number_of_registers: int = 1) -> List[int]:
+
+# track reads and errors, you may need 120Ω termination resistor
+am2_read_count = 0
+am2_read_errors = 0
+
+def read_registers(instrument, register_address: int, number_of_registers: int = 1) -> list:
     """ read count registers = returns a List """
+    global am2_read_count, am2_read_errors
     for _ in range(AM2_READ_RETRY):
+        am2_read_count += 1
         try:
             raw_result = instrument.read_registers(registeraddress=register_address, number_of_registers=number_of_registers) # LIST
             return raw_result
         except Exception as ex:
             exception_save = ex
+            am2_read_errors += 1
             time.sleep(AM2_READ_DELAY)
 
-    logger.warning("Exception: register_address=%d, number_of_registers=%d, exception=%s, roundtrip_time=%0.3f, read_retry=%d",
-                    register_address,number_of_registers,exception_save,instrument.roundtrip_time,AM2_READ_RETRY)
+    logger.warning("Exception: register_address=%d, number_of_registers=%d, exception=%s, roundtrip_time=%0.3f, read_retry=%d, read_count=%d, read_errors=%d",
+                    register_address, number_of_registers, exception_save, instrument.roundtrip_time, AM2_READ_RETRY, am2_read_count, am2_read_errors)
 
     return [None] * number_of_registers
+
 
 @dataclass(init=False)
 class Register:
@@ -175,6 +194,7 @@ class Register:
         self.name = get_name(register_address)
         self.unit = get_unit(register_address)
         self.register_raw: int = None  # register value from BMS
+        self.register_scaled = "??" if self.unit == "str" else 0
 
     def read_1_register(self, instrument) -> None:
         """read a Register from the instrument"""
@@ -198,11 +218,12 @@ class Register:
             # string of concat count registers
             result_str = ""
             for _r in range(count):
-                result_str += scale_raw_register(factor, result_list[_r], 0x3f3f) # ??
+                result_str += scale_raw_register(factor, result_list[_r], self.register_scaled[_r*2:2])
             self.register_scaled = result_str.rstrip()
 
+
 @dataclass(init=False)
-class AM2_Pack:
+class AM2battery:
     """AM2 class for reading Hubble AM2 battery"""
     def __init__(self, instrument, station_address: int = None, know_registers_only: bool=True) -> None:
         """constructor"""
@@ -211,7 +232,7 @@ class AM2_Pack:
         self.station_address = instrument.address
         self.register_data = {} # dict()
         self.itr = None
-        self.time=time.strftime('%FT%T.000')
+        self.time=time.strftime('%FT%T%z')
 
         # create dict of know registers
         for reg in AM2_REGISTERS_DICT:
@@ -222,7 +243,6 @@ class AM2_Pack:
             for reg in range(AM2_NUMBER_OF_REGISTERS):
                 self.register_data[reg]=Register(reg)
 
-        logger.debug("instrument=%s",self.instrument)
 
     def __iter__(self):
         """ implement iterator over register_data """
@@ -263,17 +283,17 @@ class AM2_Pack:
                                                        self.register_data[1].register_scaled, 1)  # Power = Watts = A * V
 
         self.register_data[1010].register_scaled=self.station_address
-        self.register_data[1011].register_scaled=time.strftime('%FT%T.000')
+        self.register_data[1011].register_scaled=time.strftime('%FT%T%z')
 
-    def read_pack(self) -> None:
-        """read pack of register_data"""
+    def read_battery(self) -> None:
+        """read all register_data of a battery"""
         self.instrument.address = self.station_address
-        self.time=time.strftime('%FT%T.000')
+        self.time=time.strftime('%FT%T%z')
         for reg in self.register_data.values():
             reg.read_1_register(self.instrument)
 
         self.calc_computed()
 
     def get_string(self, key: str) -> str:
-        """extract 'Version', 'BMS_S_N', 'Pack_S_N' from register_data"""
+        """extract 'Version', 'S_N_BMS', 'S_N_Pack' from register_data"""
         return self.register_data[AM2_STRING_DICT[key]].register_scaled
