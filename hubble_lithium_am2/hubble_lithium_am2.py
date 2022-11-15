@@ -158,7 +158,8 @@ def scale_raw_register(factor: str, register_raw: int, register_scaled):
     return round(register_raw, 3)
 
 
-# track reads and errors, you may need 120Ω termination resistor
+# track reads and errors.
+# If you experience high number of errors, you may need 120Ω termination resistor on the cable
 am2_read_count = 0
 am2_read_errors = 0
 

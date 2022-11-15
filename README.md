@@ -128,7 +128,7 @@ print(result_dict)
 
 Record cell voltages, cycles over time, send data to Home Assistant, etc
 
-see [Examples.md](/Examples.md) for sample code.
+see [EXAMPLES.md](/EXAMPLES.md) for sample code.
 
 ## 🔌 USB-to-RS485 adaptor
 
@@ -157,7 +157,7 @@ You can connect multiple batteries using cable using a splitter.
 
 Thanks to:
 - minimalmodbus
-- kellaza <https://github.com/kellerza/sunsynk> for insparation
+- kellaza <https://github.com/kellerza/sunsynk> for inspiration
 - Powerforum <https://powerforum.co.za/> for advice
 - Solar-Assistant <https://solar-assistant.io/> for a great product
 

@@ -30,19 +30,13 @@ AM2 to HASS via MQTT example app
 optional arguments:
   -h, --help            show this help message and exit
   --device DEVICE       RS485 device, e.g. /dev/ttyUSB1
-  --max-address MAX_ADDRESS
-                        Max modbus station address to read, default=1
+  --max-address         Max modbus station address to read, default=1
   --mqtt                MQTT enable message publish
-  --mqtt-user MQTT_USER
-                        MQTT username
-  --mqtt-password MQTT_PASSWORD
-                        MQTT password
-  --mqtt-broker MQTT_BROKER
-                        MQTT broker (server), default localhost
-  --mqtt-port MQTT_PORT
-                        MQTT port, default 1883
-  --mqtt-topic MQTT_TOPIC
-                        MQTT topic, default 'hubble_am2'
+  --mqtt-user           MQTT username
+  --mqtt-password       MQTT password
+  --mqtt-broker         MQTT broker (server), default localhost
+  --mqtt-port           MQTT port, default 1883
+  --mqtt-topic          MQTT topic, default 'hubble_am2'
   --mqtt-hass           MQTT enable Home Assistant discovery
   --mqtt-hass-retain    MQTT enable retain HASS discovery mesages
   --debug               Enable debug output
