@@ -223,7 +223,8 @@ def main() -> None:
             mqtt_publish_state(args.mqtt_topic, bank[addr])
 
         loop_count += 1
-        logger.info("============= sleep %d, loop_count=%d, ===========", args.sleep, loop_count)
+        logger.info("============= sleep %d, loop_count=%d, am2_read_count=%d, am2_read_errors=%d ===========", args.sleep, loop_count, am2.get_read_count(), am2.get_read_errors())
+
         time.sleep(args.sleep - (time.time() - start_time) % args.sleep)
 
 

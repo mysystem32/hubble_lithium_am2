@@ -5,8 +5,12 @@ __pycache__/
 
 # log files
 *.log
+
 # vim
 *.swp
+
+# backups
+*.bak
 
 # setuptools ignore
 /dist

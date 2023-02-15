@@ -160,24 +160,30 @@ def scale_raw_register(factor: str, register_raw: int, register_scaled):
 
 # track reads and errors.
 # If you experience high number of errors, you may need 120Ω termination resistor on the cable
-am2_read_count = 0
-am2_read_errors = 0
+AM2_READ_COUNT = 0
+AM2_READ_ERRORS = 0
+
+def get_read_count():
+    return AM2_READ_COUNT
+
+def get_read_errors():
+    return AM2_READ_ERRORS
 
 def read_registers(instrument, register_address: int, number_of_registers: int = 1) -> list:
     """ read count registers = returns a List """
-    global am2_read_count, am2_read_errors
+    global AM2_READ_COUNT, AM2_READ_ERRORS
     for _ in range(AM2_READ_RETRY):
-        am2_read_count += 1
+        AM2_READ_COUNT += 1
         try:
             raw_result = instrument.read_registers(registeraddress=register_address, number_of_registers=number_of_registers) # LIST
             return raw_result
         except Exception as ex:
             exception_save = ex
-            am2_read_errors += 1
+            AM2_READ_ERRORS += 1
             time.sleep(AM2_READ_DELAY)
 
     logger.warning("Exception: register_address=%d, number_of_registers=%d, exception=%s, roundtrip_time=%0.3f, read_retry=%d, read_count=%d, read_errors=%d",
-                    register_address, number_of_registers, exception_save, instrument.roundtrip_time, AM2_READ_RETRY, am2_read_count, am2_read_errors)
+                    register_address, number_of_registers, exception_save, instrument.roundtrip_time, AM2_READ_RETRY, AM2_READ_COUNT, AM2_READ_ERRORS)
 
     return [None] * number_of_registers
 

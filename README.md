@@ -12,15 +12,20 @@ Uses [minimalmodbus](https://github.com/pyhys/minimalmodbus/) for communications
 
 Clone the repo and pip3 install
 ```bash
+# Install prerequisites
+$ pip3 install minimalmodbus
+
 # Install into .local
 $ git clone https://github.com/mysystem32/hubble_lithium_am2.git
 $ cd hubble_lithium_am2
+
 $ pip3 install .
 ```
 
 ## ⚙️ AM2 BMS Registers
 
 Not sure what BMS is inside an AM-2.  
+According to a hexdump of the firmware update tool, the BMS seems to from http://www.pacebms.com/en/  
 Google search failed to locate any techical information.  
 The modbus register ID/value were reverse engineered / comparing to pbmstools.  
 Execute examples/print_all.py to displaying all registers.
@@ -152,6 +157,11 @@ You can connect multiple batteries using cable using a splitter.
 ![4 port cable splitter](/images/splitter-4-port.png) 
 ![make your own 8 port cable splitter](/images/splitter-make-your-own-8-port.png) 
 ![make your own 4 port cable splitter](/images/splitter-make-your-own-4-port.png) 
+
+## 🔗 RS232 Serial Port
+
+@Tertiush has written a similar app that reads from the RS232 port  
+See https://github.com/Tertiush/bmspace
 
 ## 🙇‍♂️ Credits
 
